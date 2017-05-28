@@ -5,14 +5,17 @@ import com.cloudcc.harmanworld.graphics.Screen;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.image.*;
+
 /**
  * Created by Tobias on 27.05.2017.
  */
 public class Game extends Canvas implements Runnable {
 
+    public static String title = "Harman's World";
     public static int width = 300;                    //Fensterbreite
     public static int height = width / 16 * 9;        //Fensterhöhe
     public int scale = 3;                             //Skalierungsgröße
+
 
     private Thread gameThread;
     private JFrame frame;
@@ -27,7 +30,7 @@ public class Game extends Canvas implements Runnable {
         Dimension size = new Dimension(width * scale, height * scale);
         setPreferredSize(size);
 
-        screen = new Screen(width,height);
+        screen = new Screen(width, height);
 
         frame = new JFrame();
 
@@ -49,10 +52,37 @@ public class Game extends Canvas implements Runnable {
     }
 
     public void run() {
+
+        long lastTime = System.nanoTime();
+        long timer = System.currentTimeMillis();
+
+        final double ns = 1000000000.0 / 60;
+        double delta = 0.0;
+
+        int frames = 0;
+        int updates = 0;
+
         while (running) {
-            update();
+            long now = System.nanoTime();
+            delta += (now - lastTime) / ns;
+            lastTime = now;
+            while (delta >= 1) {
+                update();
+                updates++;
+                delta--;
+            }
             render();
+            frames++;
+
+            if(System.currentTimeMillis() - timer > 1000){
+                timer += 1000;
+                System.out.println("UPS: " + updates + " FPS: " + frames);
+                frame.setTitle(title + "   |   " + "UPS: " + updates + " FPS: " + frames);
+                updates = 0;
+                frames = 0;
+            }
         }
+
     }
 
     public void update() {
@@ -65,18 +95,25 @@ public class Game extends Canvas implements Runnable {
             createBufferStrategy(3);                                        //3 == Triple Buffering runs faster with 3 not 4 5 or 10 :)
             return;
         }
+        screen.clear();
+        screen.render();
+
+        for (int i = 0; i < pixels.length; i++) {
+            pixels[i] = screen.pixels[i];
+        }
 
         Graphics g = bs.getDrawGraphics();
-        g.setColor(new Color(110, 177, 244));
-        g.fillRect(0, 0, getWidth(), getHeight());
+        g.drawImage(image, 0, 0, getWidth(), getHeight(), null);
         g.dispose();                                                        //Releases System Resources "Removes Graphics"
         bs.show();
+
+
     }
 
     public static void main(String[] args) {
         Game game = new Game();
         game.frame.setResizable(false);         //1. SetResizable
-        game.frame.setTitle("Harman's World");
+        game.frame.setTitle(game.title);
         game.frame.add(game);
         game.frame.pack();                      //Set Size of Components
         game.frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
